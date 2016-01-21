@@ -3,66 +3,21 @@
 # Parcer FiberZone configures
 # Author: Sokogen
 import sys
-from termcolor import colored, cprint
+#from termcolor import colored, cprint
 
 # Global parameters
-portTableHeaders=('Index', 'Port', 'Address', 'Media', 'Speed', 'State', 'Proto', 'PortType', 'WWN', 'Other')
-cgfkey='cfgshow'
+AllportTableHeaders=['Area', 'Index', 'Port', 'Address', 'Media', 'Speed', 'State', 'Proto', 'PortType', 'WWN', 'Other']
+portTableHeadersExp=['PortType', 'WWN', 'Other']
+cgfkey='cfgShow'
 portinfokey='portInfo'
-swshkey='swshow'
+swshkey='swShow'
 fabshkey='fabSh'
 primaryswkey='Primary'
-AllWWNList=[]
-
-#def ParceCfgShow(rawdata,
-#				fabshkey=fabshkey):
-#	""" Функция генерирует и возвращает многомерный словарь, содержащий:
-#	вид конфига (defined, effective); тип объекта (cfg, zone, alias) и его имя;
-#	и список значений для каждого из них. """
-#	for line in rawdata[fabshkey]:
-#		if 'Defined configuration:' in line:
-#			definedstart = rawdata[host][cgfkey].index(line)
-#			print ('definedstart: ',definedstart)
-#		elif "Effective configuration:" in line:
-#			effectivestart = rawdata[host][cgfkey].index(line)
-#			print ('effectivestart: ', effectivestart)
-
-#	for line in rawdata:
-#		if "Defined configuration:" in line:
-#			confType = "defined"
-#			CfgDict[confType] = {}
-#			continue
-#		elif "Effective configuration:" in line:
-#			confType = "effective"
-#			CfgDict[confType] = {}
-#			continue
-#		elif len(line.split('\t')[0]) > 0 and len(line.split('\t')) == 3:
-#			objectType = line.split('\t')[0].strip()[:-1]
-#			objectName = line.split('\t')[1].strip()
-#			objectValue = []
-#			if len(line.split('\t')[2].strip()) > 0:
-#				for value in line.split('\t')[2].split(';'):
-#					objectValue.append(value.strip())
-#			try:
-#				CfgDict[confType][objectType][objectName] = []
-#			except:
-#				CfgDict[confType][objectType] = {}
-#				CfgDict[confType][objectType][objectName] = []
-#		elif len(line.split('\t')) == 3 and len(line.split('\t')[2].strip()) > 0:
-#			objectValue = []
-#			for value in line.split('\t')[2].split(';'):
-#				if len(value.strip()) > 0:
-#					objectValue.append(value.strip())
-#			objectValue = tuple(objectValue)
-#		else:
-#			continue
-#		CfgDict[confType][objectType][objectName].extend(objectValue)
-#	return CfgDict
 
 def ParceData(rawdata,
 				swshkey=swshkey,
 				portinfokey=portinfokey,
-				portTableHeaders=portTableHeaders,
+				portTableHeadersExp=portTableHeadersExp,
 				cgfkey=cgfkey,
 				fabshkey=fabshkey,
 				primaryswkey=primaryswkey
@@ -107,18 +62,26 @@ def ParceData(rawdata,
 				CommInfoDict[host][argmnt] = str(value.strip())
 		# Collecting info from ports table
 		CommInfoDict[host][portinfokey]={}
+		portTableHeaders=rawdata[host][swshkey][portstart-1].split()
+		if portTableHeaders[0] == 'Area':
+			portTableHeaders=portTableHeaders[:-1]
+		portTableHeaders=portTableHeaders+portTableHeadersExp
 		for line in rawdata[host][swshkey][portstart + 1:]:
 			line = line.split()
+			try:
+				port = str(line[1])
+			except:
+				continue
 			while len(line) > len(portTableHeaders):
 				line[-2] = line[-2] + ' ' + line[-1]
 				line.pop()
 			for row in range(len(line)):
 				rowname = portTableHeaders[row]
 				try:
-					CommInfoDict[host][portinfokey][line[1]][rowname] = line[row]
+					CommInfoDict[host][portinfokey][port][rowname] = line[row]
 				except:
-					CommInfoDict[host][portinfokey][line[1]] = {}
-					CommInfoDict[host][portinfokey][line[1]][rowname] = line[row]
+					CommInfoDict[host][portinfokey][port] = {}
+					CommInfoDict[host][portinfokey][port][rowname] = line[row]
 
 		# Collecting config information from 'cfgshow' command 
 		for line in rawdata[host][cgfkey]:
@@ -151,13 +114,12 @@ def ParceData(rawdata,
 	return CommInfoDict
 
 def GetAllWWN(infodict):
-	" It will return sorted list, which contained all WWNs. "
+	" It returns the sorted tuple that contains all WWNs. "
 	primaryhosts=[]
 	for each in list(infodict.keys()):
 		ip=str(infodict[each]['switchPrimaryIP'])
 		if ip not in primaryhosts:
 			primaryhosts.append(ip)
-	print (primaryhosts)
 	AllWWNList=[]
 	for host in primaryhosts:
 		for value in infodict[host]['effCfg']['zone'].values():
@@ -166,7 +128,6 @@ def GetAllWWN(infodict):
 					AllWWNList.append(each)
 
 	AllWWNList=tuple(sorted(AllWWNList))
-	print (AllWWNList)
 
 	return AllWWNList
 
@@ -214,7 +175,9 @@ if __name__ == "__main__":
 	CommInfoDict = {}
 
 #	fccommutators = """\
-#	172.31.11.168,22,user1,Telegraph!
+#	192.168.128.18,22,user,password
+#	192.168.128.19,22,user,password
+#	192.168.128.53,22,user,password
 #	192.168.128.54,22,user,password"""
 
 	fccommutators = """\
@@ -261,27 +224,113 @@ if __name__ == "__main__":
 		print (ipaddr,'> done')
 
 	ParceData(rawdict)
-	GetAllWWN(CommInfoDict)
 
-#	for fccommutator in fccommutators.split('\n'):
-#		ipaddr = fccommutator.split(',')[0].split('\t')[-1].strip()
-#		print("##############",ipaddr, "##############")
-#		for key in (x for x in CommInfoDict[ipaddr] if x != portinfokey):
-#			print (key, '=> ',CommInfoDict[ipaddr][key])
-#		for key in (x for x in CommInfoDict[ipaddr] if x == portinfokey):
-#			portlist=[]
-#			info=CommInfoDict['172.31.11.168']['portInfo']
-#			for port in range(len(list(info))):
-#				oneportinfo=[]
-#				for row in portTableHeaders:
-#					try:
-#						oneportinfo.append(info[str(port)][str(row)])
-#					except:
-#						oneportinfo.append('-')
-#						continue
-#				#	portlist[port].extend(info[port][row].values())
-#				#print (tuple(oneportinfo))
-#				portlist.append(tuple(oneportinfo))
-#			for port in portlist:
-#				print('{0:^3}|{1:^3}|{2:^8}|{3:^5}|{4:^4}|{5:^10}|{6:^4}|{7:^8}|{8:28}|{9:50}'.format(*port))
+#	print (CommInfoDict)
 
+	AllWWNList=GetAllWWN(CommInfoDict)
+
+	
+	print ('{0};{1};{2};{3}'.format('WWN','Switch port','Aliases','Zones'))
+	for wwn in AllWWNList:
+		switchport,aliases,zones='-','None','None'
+		for host in list(CommInfoDict.keys()):
+			info=CommInfoDict[host]
+			for port in info[portinfokey].keys():
+				if wwn in info[portinfokey][port].values():
+					switchport='SwitchName: '+str(info['switchName'])+' / Port: '+str(info[portinfokey][port]['Port'])
+			for alias in list(info['defCfg']['alias'].keys()):
+				if wwn in info['defCfg']['alias'][alias]:
+					try:
+						aliases.append(alias)
+					except:
+						aliases=[]
+						aliases.append(alias)
+			for zone in list(info['effCfg']['zone'].keys()):
+				if wwn in info['effCfg']['zone'][zone]:
+					try:
+						zones.append(zone)
+					except:
+						zones=[]
+						zones.append(zone)
+		if type(aliases) == list:
+			aliases = ', '.join(aliases)
+		if type(zones) == list:
+			zones = ', '.join(zones)
+		x=(wwn,switchport,aliases,zones)
+	# Formated
+	#	print ('{0:24};{1:40};{2};{3}'.format(*x))
+	
+	# Clear csv
+		print ('{0};{1};{2};{3}'.format(*x))
+
+	
+	primaryhosts=[]
+	for each in list(CommInfoDict.keys()):
+		ip=str(CommInfoDict[each]['switchPrimaryIP'])
+		if ip not in primaryhosts:
+			primaryhosts.append(ip)
+	for prhost in primaryhosts:
+		prhostname=CommInfoDict[prhost]['switchPrimaryName']
+		print ('\n\n','<'*10, 'Rules for PrimaryHost:',prhostname,'>'*10)
+		for fccommutator in fccommutators.split('\n'):
+			ipaddr = fccommutator.split(',')[0].split('\t')[-1].strip()
+			info=CommInfoDict[ipaddr]
+			if prhost not in CommInfoDict[ipaddr]['switchPrimaryIP']:
+				continue
+			print('\n\n','#'*7,' ',ipaddr,' ','#'*7)
+			for key in (x for x in info if x not in (portinfokey,'defCfg','effCfg')):
+				print (key, '=> ',info[key])
+			for key in (x for x in info if x in (portinfokey)):
+				portlist=[]
+				for port in range(len(list(info[portinfokey]))):
+					oneportinfo=[]
+					aliases,zones='None','None'
+					for row in AllportTableHeaders:
+						try:
+							oneportinfo.append(info[portinfokey][str(port)][str(row)])
+						except:
+							oneportinfo.append('-')
+							continue
+					if 'WWN' in list(info[portinfokey][str(port)].keys()):
+						wwn = str(info[portinfokey][str(port)]['WWN'])
+						for alias in list(info['defCfg']['alias'].keys()):
+							if wwn in info['defCfg']['alias'][alias]:
+								try:
+									aliases.append(alias)
+								except:
+									aliases=[]
+									aliases.append(alias)
+						if type(aliases) == list:
+							aliases = ', '.join(aliases)
+						else: aliases = 'None'
+						
+						for zone in list(info['effCfg']['zone'].keys()):
+							if wwn in info['effCfg']['zone'][zone]:
+								try:
+									zones.append(zone)
+								except:
+									zones=[]
+									zones.append(zone)
+						if type(zones) == list:
+							zones = ', '.join(zones)
+						else: zones = 'None'
+					oneportinfo.append(aliases)
+					oneportinfo.append(zones)
+					portlist.append(tuple(oneportinfo))
+	
+	# Formated
+	#			print (portlist)
+	#			print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:^23}|{10:^32}|aliases|zones'.format(*AllportTableHeaders))
+	#			for port in portlist:
+	#				print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:23}|{10:32}|{11}|{12}'.format(*port))
+	#			print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:^23};{10:^32};aliases;zones'.format(*AllportTableHeaders))
+	#			for port in portlist:
+	#				print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:23};{10:32};{11};{12}'.format(*port))
+
+	# Clear csv
+				print('{2};{4};{5};{6};{8};{9};{10};aliases;zones'.format(*AllportTableHeaders))
+				for port in portlist:
+					print('{2};{4};{5};{6};{8};{9};{10};{11};{12}'.format(*port))
+		print('\n\n\n')
+
+	print()

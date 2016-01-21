@@ -57,3 +57,22 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Some files for development
+192.168.128.18.cfgshow
+192.168.128.18.fabsh
+192.168.128.18.switchshow
+192.168.128.19.cfgshow
+192.168.128.19.fabsh
+192.168.128.19.switchshow
+192.168.128.53.cfgshow
+192.168.128.53.fabsh
+192.168.128.53.switchshow
+192.168.128.54.cfgshow
+192.168.128.54.fabsh
+192.168.128.54.switchshow
+FC_Brcd01Cod
+FC_Brcd01Cod_result
+FC_Brcd02Cod
+FC_Brcd02Cod_result
+oop_fc_parcer.py
