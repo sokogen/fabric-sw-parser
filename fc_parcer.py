@@ -6,8 +6,8 @@ import sys
 #from termcolor import colored, cprint
 
 # Global parameters
-AllportTableHeaders=['Area', 'Index', 'Port', 'Address', 'Media', 'Speed', 'State', 'Proto', 'PortType', 'WWN', 'Other']
-portTableHeadersExp=['PortType', 'WWN', 'Other']
+AllportTableHeaders=['Area', 'Index', 'Port', 'Address', 'Media', 'Speed', 'State', 'Proto', 'PortType', 'WWN', 'Comment']
+portTableHeadersExp=['PortType', 'WWN', 'Comment']
 cgfkey='cfgShow'
 portinfokey='portInfo'
 swshkey='swShow'
@@ -63,13 +63,13 @@ def ParceData(rawdata,
 		# Collecting info from ports table
 		CommInfoDict[host][portinfokey]={}
 		portTableHeaders=rawdata[host][swshkey][portstart-1].split()
-		if portTableHeaders[0] == 'Area':
-			portTableHeaders=portTableHeaders[:-1]
+		if portTableHeaders[0] == 'Area':			# Костыль для FabricOS
+			portTableHeaders=portTableHeaders[:-1]	# 6 версии (пустые поля типа порта)
 		portTableHeaders=portTableHeaders+portTableHeadersExp
 		for line in rawdata[host][swshkey][portstart + 1:]:
 			line = line.split()
 			try:
-				port = str(line[1])
+				port = line[1]
 			except:
 				continue
 			while len(line) > len(portTableHeaders):
@@ -77,6 +77,10 @@ def ParceData(rawdata,
 				line.pop()
 			for row in range(len(line)):
 				rowname = portTableHeaders[row]
+				if rowname == 'WWN':
+					if line[row].count(':')<7:
+						line[row+1]=line[row] + ' ' + line[row+1]
+						continue
 				try:
 					CommInfoDict[host][portinfokey][port][rowname] = line[row]
 				except:
@@ -258,10 +262,10 @@ if __name__ == "__main__":
 			zones = ', '.join(zones)
 		x=(wwn,switchport,aliases,zones)
 	# Formated
-	#	print ('{0:24};{1:40};{2};{3}'.format(*x))
-	
+		print ('{0:24};{1:40};{2};{3}'.format(*x))
+
 	# Clear csv
-		print ('{0};{1};{2};{3}'.format(*x))
+	#	print ('{0};{1};{2};{3}'.format(*x))
 
 	
 	primaryhosts=[]
@@ -323,14 +327,15 @@ if __name__ == "__main__":
 	#			print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:^23}|{10:^32}|aliases|zones'.format(*AllportTableHeaders))
 	#			for port in portlist:
 	#				print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:23}|{10:32}|{11}|{12}'.format(*port))
-	#			print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:^23};{10:^32};aliases;zones'.format(*AllportTableHeaders))
-	#			for port in portlist:
-	#				print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:23};{10:32};{11};{12}'.format(*port))
-
-	# Clear csv
-				print('{2};{4};{5};{6};{8};{9};{10};aliases;zones'.format(*AllportTableHeaders))
+				print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:^23};{10:^32};aliases;zones'.format(*AllportTableHeaders))
 				for port in portlist:
-					print('{2};{4};{5};{6};{8};{9};{10};{11};{12}'.format(*port))
+					print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:23};{10:32};{11};{12}'.format(*port))
+
+
+#	# Clear csv
+#				print('{2};{4};{5};{6};{8};{9};{10};aliases;zones'.format(*AllportTableHeaders))
+#				for port in portlist:
+#					print('{2};{4};{5};{6};{8};{9};{10};{11};{12}'.format(*port))
 		print('\n\n\n')
 
 	print()
