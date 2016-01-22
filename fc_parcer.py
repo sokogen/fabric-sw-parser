@@ -3,11 +3,10 @@
 # Parcer FiberZone configures
 # Author: Sokogen
 import sys
-#from termcolor import colored, cprint
 
 # Global parameters
-AllportTableHeaders=['Area', 'Index', 'Port', 'Address', 'Media', 'Speed', 'State', 'Proto', 'PortType', 'WWN', 'Comment']
-portTableHeadersExp=['PortType', 'WWN', 'Comment']
+portTableHeadersExp=['PortType', 'WWN', 'Port description']
+AllportTableHeaders=['Area', 'Index', 'Port', 'Address', 'Media', 'Speed', 'State', 'Proto']+portTableHeadersExp
 cgfkey='cfgShow'
 portinfokey='portInfo'
 swshkey='swShow'
@@ -233,8 +232,11 @@ if __name__ == "__main__":
 
 	AllWWNList=GetAllWWN(CommInfoDict)
 
-	
-	print ('{0};{1};{2};{3}'.format('WWN','Switch port','Aliases','Zones'))
+	if sys.argv[-1].lower() == 'csv':
+	# Show information for all WWN
+		print ('{0};{1};{2};{3}'.format('WWN','Switch port','Aliases','Zones'))
+	else: print ('{0:^24}|{1:^40}|{2:^18}|{3:>5}'.format('WWN','Switch port','Aliases','Zones'))
+
 	for wwn in AllWWNList:
 		switchport,aliases,zones='-','None','None'
 		for host in list(CommInfoDict.keys()):
@@ -242,30 +244,35 @@ if __name__ == "__main__":
 			for port in info[portinfokey].keys():
 				if wwn in info[portinfokey][port].values():
 					switchport='SwitchName: '+str(info['switchName'])+' / Port: '+str(info[portinfokey][port]['Port'])
-			for alias in list(info['defCfg']['alias'].keys()):
-				if wwn in info['defCfg']['alias'][alias]:
+			for alias in (x for x in list(info['defCfg']['alias'].keys()) if x not in aliases):
+				if wwn in info['defCfg']['alias'][alias] :
 					try:
 						aliases.append(alias)
 					except:
 						aliases=[]
 						aliases.append(alias)
-			for zone in list(info['effCfg']['zone'].keys()):
+			for zone in (x for x in list(info['effCfg']['zone'].keys()) if x not in zones):
 				if wwn in info['effCfg']['zone'][zone]:
 					try:
 						zones.append(zone)
 					except:
 						zones=[]
 						zones.append(zone)
+
 		if type(aliases) == list:
 			aliases = ', '.join(aliases)
 		if type(zones) == list:
 			zones = ', '.join(zones)
-		x=(wwn,switchport,aliases,zones)
-	# Formated
-		print ('{0:24};{1:40};{2};{3}'.format(*x))
 
-	# Clear csv
-	#	print ('{0};{1};{2};{3}'.format(*x))
+		string=(wwn,switchport,aliases,zones)
+
+		if sys.argv[-1].lower() == 'csv':
+		# Clear csv
+			print ('{0};{1};{2};{3}'.format(*string))
+		else:
+		# Formated
+			print ('{0:24}|{1:<40}|{2:<18}|{3}'.format(*string))
+
 
 	
 	primaryhosts=[]
@@ -321,21 +328,22 @@ if __name__ == "__main__":
 					oneportinfo.append(aliases)
 					oneportinfo.append(zones)
 					portlist.append(tuple(oneportinfo))
+
+				if sys.argv[-1].lower() == 'csv':
+				# Clear csv
+					print('{2};{4};{5};{6};{8};{9};{10};aliases;zones'.format(*AllportTableHeaders))
+					for port in portlist:
+						print('{2};{4};{5};{6};{8};{9};{10};{11};{12}'.format(*port))
+
+				else:
+				# Formated
+				#	print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:^23}|{10:^32}|aliases|zones'.format(*AllportTableHeaders))
+				#	for port in portlist:
+				#		print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:23}|{10:32}|{11}|{12}'.format(*port))
+					print('{2:^4}|{4:^5}|{5:^5}|{6:^10}|{8:^8}|{9:^23}|{10:^32}|aliases|zones'.format(*AllportTableHeaders))
+					for port in portlist:
+						print('{2:^4}|{4:^5}|{5:^5}|{6:^10}|{8:^8}|{9:23}|{10:32}|{11}|{12}'.format(*port))
 	
-	# Formated
-	#			print (portlist)
-	#			print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:^23}|{10:^32}|aliases|zones'.format(*AllportTableHeaders))
-	#			for port in portlist:
-	#				print('{0:^4}|{1:^5}|{2:^4}|{3:^7}|{4:^5}|{5:^5}|{6:^10}|{7:^5}|{8:^8}|{9:23}|{10:32}|{11}|{12}'.format(*port))
-				print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:^23};{10:^32};aliases;zones'.format(*AllportTableHeaders))
-				for port in portlist:
-					print('{2:^4};{4:^5};{5:^5};{6:^10};{8:^8};{9:23};{10:32};{11};{12}'.format(*port))
-
-
-#	# Clear csv
-#				print('{2};{4};{5};{6};{8};{9};{10};aliases;zones'.format(*AllportTableHeaders))
-#				for port in portlist:
-#					print('{2};{4};{5};{6};{8};{9};{10};{11};{12}'.format(*port))
 		print('\n\n\n')
 
 	print()
