@@ -173,19 +173,10 @@ if __name__ == "__main__":
 	import paramiko
 	import operator
 
-	#	initialisation(sys.argv)
 	rawdict = {}
 	CommInfoDict = {}
 
-#	fccommutators = """\
-#	192.168.128.18,22,user,password
-#	192.168.128.19,22,user,password
-#	192.168.128.53,22,user,password
-#	192.168.128.54,22,user,password"""
-
 	fccommutators = """\
-	172.31.11.168,22,user1,Telegraph!
-	172.31.11.169,22,user1,Telegraph!
 	172.31.11.204,22,user,password
 	172.31.11.205,22,user,password
 	172.31.11.206,22,user,password
